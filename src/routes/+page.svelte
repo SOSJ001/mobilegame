@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 
 	// Emoji Packs
-	const EMOJI_PACKS = {
+	const EMOJI_PACKS: Record<string, string[]> = {
 		faces: [
 			'😀',
 			'😂',
@@ -91,7 +91,10 @@
 	};
 
 	// Color Themes
-	const COLOR_THEMES = {
+	const COLOR_THEMES: Record<
+		string,
+		{ bg: string; text: string; button: string; buttonHover: string }
+	> = {
 		light: {
 			bg: 'linear-gradient(135deg, #f9d423 0%, #ff4e50 100%)',
 			text: '#333',
@@ -112,9 +115,9 @@
 		}
 	};
 
-	let currentPack = 'faces';
-	let currentTheme = 'light';
-	let EMOJIS = EMOJI_PACKS[currentPack];
+	let currentPack: string = 'faces';
+	let currentTheme: string = 'light';
+	let EMOJIS: string[] = EMOJI_PACKS[currentPack];
 
 	let sequence: string[] = [];
 	let userInput: string[] = [];
@@ -273,19 +276,11 @@
 	}
 
 	onMount(() => {
-		// Initialize audio (using simple beep sounds)
-		audioCorrect = new Audio(
-			'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT'
-		);
-		audioWrong = new Audio(
-			'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT'
-		);
-		audioGameOver = new Audio(
-			'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT'
-		);
-		audioTick = new Audio(
-			'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT'
-		);
+		// Initialize audio with simple file paths
+		audioCorrect = new Audio('/audio/correct.mp3');
+		audioWrong = new Audio('/audio/wrong.mp3');
+		audioGameOver = new Audio('/audio/gameover.mp3');
+		audioTick = new Audio('/audio/tick.mp3');
 	});
 </script>
 
