@@ -250,7 +250,7 @@
 					message = `Game Over! Score: ${score}`;
 					audioGameOver?.play();
 					clearInterval(timer);
-				}, 2000); // Wait 2 seconds after emoji disappears
+				}, 1000); // Wait 1 second after emoji disappears
 			}, 500); // Shake for 500ms
 			return;
 		}
