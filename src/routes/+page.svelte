@@ -142,6 +142,9 @@
 	let audioGameOver: HTMLAudioElement;
 	let audioTick: HTMLAudioElement;
 
+	let audioLoaded = false;
+	let audioError = '';
+
 	let animateIdx: number | null = null;
 	let animateType: 'bounce' | 'shake' | null = null;
 
@@ -181,6 +184,11 @@
 		timer = setInterval(() => {
 			if (!gamePaused && !gameOver) {
 				timeLeft--;
+				// Play tick sound every second
+				audioTick?.play().catch((error) => {
+					console.error('Tick sound failed:', error);
+				});
+
 				if (timeLeft <= 0) {
 					clearInterval(timer);
 					gameOver = true;
@@ -224,21 +232,26 @@
 		const seqIdx = userInput.length - 1;
 
 		if (emoji !== sequence[seqIdx]) {
-			// Wrong tap
+			// Wrong tap - play sound and animate
 			animateIdx = idx;
 			animateType = 'shake';
 			audioWrong?.play();
 			vibrate([100, 50, 100]);
 
+			// Make the emoji disappear and show game over after delay
 			setTimeout(() => {
 				animateIdx = null;
 				animateType = null;
-			}, 500);
+				message = ''; // Clear the sequence display
 
-			gameOver = true;
-			message = `Game Over! Score: ${score}`;
-			audioGameOver?.play();
-			clearInterval(timer);
+				// Show game over after emoji disappears
+				setTimeout(() => {
+					gameOver = true;
+					message = `Game Over! Score: ${score}`;
+					audioGameOver?.play();
+					clearInterval(timer);
+				}, 2000); // Wait 2 seconds after emoji disappears
+			}, 500); // Shake for 500ms
 			return;
 		}
 
@@ -275,12 +288,43 @@
 		showTutorial = false;
 	}
 
+	function testAudio() {
+		console.log('Testing audio...');
+		if (audioCorrect) {
+			audioCorrect
+				.play()
+				.then(() => {
+					console.log('Audio test successful');
+				})
+				.catch((error) => {
+					console.error('Audio test failed:', error);
+					audioError = error.message;
+				});
+		}
+	}
+
 	onMount(() => {
-		// Initialize audio with simple file paths
-		audioCorrect = new Audio('/audio/correct.mp3');
-		audioWrong = new Audio('/audio/wrong.mp3');
-		audioGameOver = new Audio('/audio/gameover.mp3');
-		audioTick = new Audio('/audio/tick.mp3');
+		// Initialize audio with error handling
+		try {
+			audioCorrect = new Audio('/audio/correct.mp3');
+			audioWrong = new Audio('/audio/wrong.mp3');
+			audioGameOver = new Audio('/audio/gameover.mp3');
+			audioTick = new Audio('/audio/tick.mp3');
+
+			// Preload audio files
+			Promise.all([audioCorrect.load(), audioWrong.load(), audioGameOver.load(), audioTick.load()])
+				.then(() => {
+					audioLoaded = true;
+					console.log('All audio files loaded successfully');
+				})
+				.catch((error) => {
+					console.error('Audio loading failed:', error);
+					audioError = error.message;
+				});
+		} catch (error) {
+			console.error('Audio initialization failed:', error);
+			audioError = error instanceof Error ? error.message : 'Unknown error';
+		}
 	});
 </script>
 
@@ -348,6 +392,19 @@
 		</div>
 
 		<button class="start-menu-btn" on:click={startGame}>Start Game</button>
+
+		<!-- Audio Test Section -->
+		<div class="menu-section">
+			<h3>Audio Test:</h3>
+			<button class="test-audio-btn" on:click={testAudio}>Test Audio</button>
+			{#if audioLoaded}
+				<div class="audio-status success">✅ Audio loaded successfully</div>
+			{:else if audioError}
+				<div class="audio-status error">❌ Audio error: {audioError}</div>
+			{:else}
+				<div class="audio-status">⏳ Loading audio...</div>
+			{/if}
+		</div>
 	</div>
 {:else}
 	<!-- Game UI -->
@@ -742,5 +799,31 @@
 
 	.gameover-menu:hover {
 		background: #ffe082;
+	}
+
+	/* Audio Test Styles */
+	.test-audio-btn {
+		padding: 0.8rem 1.5rem;
+		border: 2px solid white;
+		border-radius: 0.5rem;
+		background: rgba(255, 255, 255, 0.2);
+		color: white;
+		font-weight: bold;
+		cursor: pointer;
+		margin-bottom: 1rem;
+	}
+
+	.audio-status {
+		color: white;
+		font-size: 0.9rem;
+		margin-top: 0.5rem;
+	}
+
+	.audio-status.success {
+		color: #4ade80;
+	}
+
+	.audio-status.error {
+		color: #f87171;
 	}
 </style>
