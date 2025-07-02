@@ -148,6 +148,8 @@
 	let animateIdx: number | null = null;
 	let animateType: 'bounce' | 'shake' | null = null;
 
+	let audienceEmojiQueue: string[] = [];
+
 	function getRandomEmoji() {
 		return EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
 	}
@@ -223,6 +225,15 @@
 		}
 		showingSequence = false;
 		userInput = [];
+
+		// After showing the sequence, process any queued audience emoji
+		if (audienceEmojiQueue.length > 0) {
+			const nextEmoji = audienceEmojiQueue.shift();
+			if (nextEmoji) {
+				sequence.push(nextEmoji);
+				await showSequence();
+			}
+		}
 	}
 
 	function handleEmojiTap(emoji: string, idx: number) {
@@ -289,7 +300,6 @@
 	}
 
 	function testAudio() {
-		console.log('Testing audio...');
 		if (audioCorrect) {
 			audioCorrect
 				.play()
@@ -325,6 +335,33 @@
 			console.error('Audio initialization failed:', error);
 			audioError = error instanceof Error ? error.message : 'Unknown error';
 		}
+
+		// WebSocket connection to TikTok bot/game server
+		const ws = new WebSocket('ws://localhost:3001');
+		ws.onmessage = (event) => {
+			const data = JSON.parse(event.data);
+			console.log('🌐 WebSocket message received:', data); // Debug log for incoming message
+
+			// Handle emoji from audience
+			if (data.type === 'audience_emoji') {
+				if (showingSequence) {
+					audienceEmojiQueue.push(data.emoji);
+				} else {
+					sequence.push(data.emoji);
+					showSequence();
+				}
+			}
+
+			// Handle theme change
+			if (data.type === 'audience_theme') {
+				changeTheme(data.theme);
+			}
+
+			// Handle emoji pack change
+			if (data.type === 'audience_pack') {
+				changeEmojiPack(data.pack);
+			}
+		};
 	});
 </script>
 
@@ -338,6 +375,13 @@
 				<p>2. Tap the emojis in the same order</p>
 				<p>3. Each round adds one more emoji</p>
 				<p>4. Don't make a mistake or it's game over!</p>
+				<p style="margin-top:1.5rem; font-weight:bold; color:#ff4e50;">Audience can play too!</p>
+				<p>
+					Send emoji commands in TikTok chat like <span style="background:#eee; padding:2px 6px; border-radius:4px;">w 😍</span> or <span style="background:#eee; padding:2px 6px; border-radius:4px;">W 🦄</span>
+				</p>
+				<p>
+					Type <span style="background:#eee; padding:2px 6px; border-radius:4px;">w &lt;emoji&gt;</span> or <span style="background:#eee; padding:2px 6px; border-radius:4px;">W &lt;emoji&gt;</span> to send an emoji to the game!
+				</p>
 			</div>
 			<div class="tutorial-modes">
 				<button
