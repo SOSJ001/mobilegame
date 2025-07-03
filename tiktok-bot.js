@@ -2,7 +2,7 @@ import { WebcastPushConnection } from 'tiktok-live-connector';
 import WebSocket from 'ws';
 
 // Configuration
-const TIKTOK_USERNAME = 'entrywithzikk'; // Replace with your TikTok username
+const TIKTOK_USERNAME = 'anna_tingles_asmr'; // Replace with your TikTok username
 const GAME_WEBSOCKET_URL = 'ws://localhost:3001'; // WebSocket server for game
 
 // WebSocket connection to game
@@ -131,7 +131,7 @@ for (const [pack, emojis] of Object.entries(EMOJI_PACKS)) {
 
 // Listen for chat messages
 tiktokLiveConnection.on('chat', (data) => {
-	console.log(`${data.uniqueId}: ${data.comment}`);
+	// console.log(`${data.uniqueId}: ${data.comment}`);
 	const dedupKey = `${data.uniqueId}:${data.comment}`;
 	const now = Date.now();
 
@@ -252,6 +252,17 @@ tiktokLiveConnection.on('chat', (data) => {
 			pack: randomPack,
 			user: data.uniqueId
 		});
+	}
+
+	// Debug log for nickname and uniqueId
+	// console.log(`DEBUG: uniqueId=${data.uniqueId}, nickname=${data.nickname}`);
+
+	// Team join command: 'T A', 'T B', 'TEAM A', or 'TEAM B' (case-insensitive)
+	if (/^(T|TEAM)\s+[AB]$/i.test(data.comment.trim())) {
+		const team = data.comment.trim().slice(-1).toUpperCase();
+		sendToGame({ type: 'TEAM_JOIN', user: data.uniqueId, team });
+		console.log(`📤 ${data.uniqueId} joined Team ${team}`);
+		return;
 	}
 });
 

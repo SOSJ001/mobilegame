@@ -151,6 +151,23 @@
 	let audienceEmojiQueue: { emoji: string; user: string }[] = [];
 	let chatMessages: { user: string; comment: string }[] = [];
 
+	// Add game modes
+	const GAME_MODES = [
+		'STREAMER_PLAY',
+		'AUDIENCE_VS_COMPUTER',
+		'STREAMER_VS_AUDIENCE',
+		'AUDIENCE_VS_AUDIENCE'
+	];
+
+	let selectedMode = 'STREAMER_PLAY';
+	let ws;
+
+	// Team state for Audience vs Audience mode
+	let teams = {
+		A: { members: [], score: 0 },
+		B: { members: [], score: 0 }
+	};
+
 	function getRandomEmoji() {
 		return EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
 	}
@@ -313,6 +330,12 @@
 		}
 	}
 
+	function changeMode() {
+		if (ws && ws.readyState === 1) {
+			ws.send(JSON.stringify({ type: 'CHANGE_MODE', mode: selectedMode }));
+		}
+	}
+
 	onMount(() => {
 		// Initialize audio with error handling
 		try {
@@ -337,10 +360,10 @@
 		}
 
 		// WebSocket connection to TikTok bot/game server
-		const ws = new WebSocket('ws://localhost:3001');
+		ws = new WebSocket('ws://localhost:3001');
 		ws.onmessage = (event) => {
 			const data = JSON.parse(event.data);
-			// console.log('🌐 WebSocket message received:', data); // Debug log for incoming message
+			console.log('WS EVENT:', data); // Catch-all log for all incoming events
 
 			// Real-time chat display for all chat messages
 			// if (data.type === 'chat_message') {
@@ -360,6 +383,22 @@
 			// Handle emoji pack change
 			if (data.type === 'audience_pack') {
 				changeEmojiPack(data.pack);
+			}
+
+			// Handle game mode change
+			if (data.type === 'MODE_CHANGED') {
+				selectedMode = data.mode;
+			}
+
+			// Handle team state
+			if (data.type === 'TEAM_STATE') {
+				teams = {
+					A: { ...data.teams.A },
+					B: { ...data.teams.B }
+				};
+				// Log team members and their teams for debugging
+				console.log('Team A members:', teams.A.members);
+				console.log('Team B members:', teams.B.members);
 			}
 		};
 	});
@@ -413,6 +452,20 @@
 	<!-- Main Menu -->
 	<div class="menu-container" style="background: {COLOR_THEMES[currentTheme].bg}">
 		<h1 class="game-title">Emoji Echo</h1>
+
+		{#if !gameStarted && !showTutorial}
+			<div class="menu-section">
+				<h3>Choose Game Mode:</h3>
+				<select bind:value={selectedMode} on:change={changeMode}>
+					{#each GAME_MODES as mode}
+						<option value={mode}>{mode.replace(/_/g, ' ')}</option>
+					{/each}
+				</select>
+				<p style="color:white; margin-top:0.5rem;">
+					Current Mode: {selectedMode.replace(/_/g, ' ')}
+				</p>
+			</div>
+		{/if}
 
 		<div class="menu-section">
 			<h3>Choose Emoji Pack:</h3>
@@ -508,6 +561,23 @@
 				<div style="margin:1rem 0; color:{COLOR_THEMES[currentTheme].text}; font-size:1rem;">
 					<div>Sequence: {sequence.join(' ')}</div>
 					<div>Your input: {userInput.join(' ')}</div>
+				</div>
+			{/if}
+
+			{#if selectedMode === 'AUDIENCE_VS_AUDIENCE'}
+				<div class="team-play-section">
+					<div class="team team-a">
+						<h3>Team A</h3>
+						<div>Score: {teams.A.score}</div>
+						<div>Members: {teams.A.members.join(', ') || 'None'}</div>
+					</div>
+					<div class="team team-b">
+						<h3>Team B</h3>
+						<div>Score: {teams.B.score}</div>
+						<div>Members: {teams.B.members.join(', ') || 'None'}</div>
+					</div>
+					<!-- Placeholder: Show which team's turn it is -->
+					<div class="team-turn">(Team turn logic coming soon)</div>
 				</div>
 			{/if}
 		{:else}
@@ -910,5 +980,26 @@
 	.chat-text {
 		margin-left: 0.3rem;
 		word-break: break-word;
+	}
+
+	/* Team Play Styles */
+	.team-play-section {
+		display: flex;
+		gap: 2rem;
+		margin-top: 2rem;
+	}
+
+	.team {
+		text-align: center;
+	}
+
+	.team h3 {
+		font-size: 1.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.team-turn {
+		font-size: 1.2rem;
+		margin-top: 0.5rem;
 	}
 </style>
