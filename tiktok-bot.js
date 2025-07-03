@@ -2,7 +2,7 @@ import { WebcastPushConnection } from 'tiktok-live-connector';
 import WebSocket from 'ws';
 
 // Configuration
-const TIKTOK_USERNAME = 'kombeastmode'; // Replace with your TikTok username
+const TIKTOK_USERNAME = 'entrywithzikk'; // Replace with your TikTok username
 const GAME_WEBSOCKET_URL = 'ws://localhost:3001'; // WebSocket server for game
 
 // WebSocket connection to game
@@ -148,6 +148,9 @@ tiktokLiveConnection.on('chat', (data) => {
 		return;
 	}
 	recentMessages.set(dedupKey, now);
+
+	// Send all chat messages to the game for real-time chat display
+	sendToGame({ type: 'chat_message', user: data.uniqueId, comment: data.comment });
 
 	// Accept any emoji in the packs
 	if (emojiToPack[data.comment]) {

@@ -148,7 +148,8 @@
 	let animateIdx: number | null = null;
 	let animateType: 'bounce' | 'shake' | null = null;
 
-	let audienceEmojiQueue: string[] = [];
+	let audienceEmojiQueue: { emoji: string; user: string }[] = [];
+	let chatMessages: { user: string; comment: string }[] = [];
 
 	function getRandomEmoji() {
 		return EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
@@ -225,15 +226,6 @@
 		}
 		showingSequence = false;
 		userInput = [];
-
-		// After showing the sequence, process any queued audience emoji
-		if (audienceEmojiQueue.length > 0) {
-			const nextEmoji = audienceEmojiQueue.shift();
-			if (nextEmoji) {
-				sequence.push(nextEmoji);
-				await showSequence();
-			}
-		}
 	}
 
 	function handleEmojiTap(emoji: string, idx: number) {
@@ -283,7 +275,15 @@
 			score++;
 			round++;
 			setTimeout(() => {
-				sequence.push(getRandomEmoji());
+				// Add one emoji from the audience queue if available
+				if (audienceEmojiQueue.length > 0) {
+					const next = audienceEmojiQueue.shift();
+					if (next) {
+						sequence.push(next.emoji);
+					}
+				} else {
+					sequence.push(getRandomEmoji());
+				}
 				showSequence();
 			}, 600);
 		}
@@ -342,14 +342,14 @@
 			const data = JSON.parse(event.data);
 			console.log('🌐 WebSocket message received:', data); // Debug log for incoming message
 
-			// Handle emoji from audience
+			// Real-time chat display for all chat messages
+			if (data.type === 'chat_message') {
+				chatMessages = [{ user: data.user, comment: data.comment }, ...chatMessages].slice(0, 10);
+			}
+
+			// Always queue audience emojis with user
 			if (data.type === 'audience_emoji') {
-				if (showingSequence) {
-					audienceEmojiQueue.push(data.emoji);
-				} else {
-					sequence.push(data.emoji);
-					showSequence();
-				}
+				audienceEmojiQueue.push({ emoji: data.emoji, user: data.user });
 			}
 
 			// Handle theme change
@@ -377,10 +377,18 @@
 				<p>4. Don't make a mistake or it's game over!</p>
 				<p style="margin-top:1.5rem; font-weight:bold; color:#ff4e50;">Audience can play too!</p>
 				<p>
-					Send emoji commands in TikTok chat like <span style="background:#eee; padding:2px 6px; border-radius:4px;">w 😍</span> or <span style="background:#eee; padding:2px 6px; border-radius:4px;">W 🦄</span>
+					Send emoji commands in TikTok chat like <span
+						style="background:#eee; padding:2px 6px; border-radius:4px;">w 😍</span
+					>
+					or <span style="background:#eee; padding:2px 6px; border-radius:4px;">W 🦄</span>
 				</p>
 				<p>
-					Type <span style="background:#eee; padding:2px 6px; border-radius:4px;">w &lt;emoji&gt;</span> or <span style="background:#eee; padding:2px 6px; border-radius:4px;">W &lt;emoji&gt;</span> to send an emoji to the game!
+					Type <span style="background:#eee; padding:2px 6px; border-radius:4px;"
+						>w &lt;emoji&gt;</span
+					>
+					or
+					<span style="background:#eee; padding:2px 6px; border-radius:4px;">W &lt;emoji&gt;</span> to
+					send an emoji to the game!
 				</p>
 			</div>
 			<div class="tutorial-modes">
@@ -454,6 +462,13 @@
 	<!-- Game UI -->
 	<div class="game-container" style="background: {COLOR_THEMES[currentTheme].bg}">
 		{#if !gameOver}
+			<!-- {#if chatMessages.length > 0}
+				<div class="audience-chat">
+					{#each chatMessages as msg}
+						<div class="chat-msg overflow-y-auto"><span class="audience-user">{msg.user}:</span> <span class="chat-text">{msg.comment}</span></div>
+					{/each}
+				</div>
+			{/if} -->
 			<div class="game-header">
 				<div class="score">Round: {round} | Score: {score}</div>
 				{#if gameMode === 'timed'}
@@ -869,5 +884,31 @@
 
 	.audio-status.error {
 		color: #f87171;
+	}
+
+	/* Audience Chat Styles */
+	.audience-chat {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.2rem;
+		margin-bottom: 0.5rem;
+		width: 100%;
+		max-width: 320px;
+	}
+	.chat-msg {
+		background: rgba(255, 255, 255, 0.85);
+		color: #222;
+		padding: 0.2rem 0.7rem;
+		border-radius: 0.5rem;
+		font-size: 1.1rem;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+		display: flex;
+		align-items: center;
+	}
+
+	.chat-text {
+		margin-left: 0.3rem;
+		word-break: break-word;
 	}
 </style>
