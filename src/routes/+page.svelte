@@ -340,12 +340,12 @@
 		const ws = new WebSocket('ws://localhost:3001');
 		ws.onmessage = (event) => {
 			const data = JSON.parse(event.data);
-			console.log('🌐 WebSocket message received:', data); // Debug log for incoming message
+			// console.log('🌐 WebSocket message received:', data); // Debug log for incoming message
 
 			// Real-time chat display for all chat messages
-			if (data.type === 'chat_message') {
-				chatMessages = [{ user: data.user, comment: data.comment }, ...chatMessages].slice(0, 10);
-			}
+			// if (data.type === 'chat_message') {
+			// 	chatMessages = [{ user: data.user, comment: data.comment }, ...chatMessages].slice(0, 10);
+			// }
 
 			// Always queue audience emojis with user
 			if (data.type === 'audience_emoji') {
