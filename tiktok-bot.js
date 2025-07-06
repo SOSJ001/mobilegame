@@ -2,7 +2,7 @@ import { WebcastPushConnection } from 'tiktok-live-connector';
 import WebSocket from 'ws';
 
 // Configuration
-const TIKTOK_USERNAME = 'anna_tingles_asmr'; // Replace with your TikTok username
+const TIKTOK_USERNAME = 'mickey7hi'; // Replace with your TikTok username
 const GAME_WEBSOCKET_URL = 'ws://localhost:3001'; // WebSocket server for game
 
 // WebSocket connection to game
@@ -262,6 +262,26 @@ tiktokLiveConnection.on('chat', (data) => {
 		const team = data.comment.trim().slice(-1).toUpperCase();
 		sendToGame({ type: 'TEAM_JOIN', user: data.uniqueId, team });
 		console.log(`📤 ${data.uniqueId} joined Team ${team}`);
+		return;
+	}
+
+	// Team emoji guess command: 'GUESS <emoji>' (case-insensitive)
+	if (/^GUESS\s+([\p{Emoji}\u200d\u2640-\u2642-\u2600-\u27BF]+)/iu.test(data.comment.trim())) {
+		const match = data.comment
+			.trim()
+			.match(/^GUESS\s+([\p{Emoji}\u200d\u2640-\u2642-\u2600-\u27BF]+)/iu);
+		if (match) {
+			const emoji = match[1];
+			// Determine which team the user is on
+			let userTeam = null;
+			// This will be determined by the backend based on team membership
+			sendToGame({
+				type: 'TEAM_EMOJI_GUESS',
+				user: data.uniqueId,
+				emoji: emoji
+			});
+			console.log(`📤 ${data.uniqueId} guessed emoji: ${emoji}`);
+		}
 		return;
 	}
 });

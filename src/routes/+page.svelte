@@ -168,6 +168,20 @@
 		B: { members: [], score: 0 }
 	};
 
+	// Team gameplay state
+	let teamGameState = {
+		isActive: false,
+		currentTurn: 'A',
+		currentSequence: [],
+		roundNumber: 1,
+		sequenceLength: 1,
+		waitingForGuess: false
+	};
+
+	// Team round display
+	let showTeamSequence = false;
+	let teamSequenceDisplay = '';
+
 	function getRandomEmoji() {
 		return EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
 	}
@@ -400,6 +414,53 @@
 				console.log('Team A members:', teams.A.members);
 				console.log('Team B members:', teams.B.members);
 			}
+
+			// Handle team game events
+			if (data.type === 'TEAM_GAME_START') {
+				teamGameState.isActive = true;
+				teamGameState.currentTurn = 'A';
+				teamGameState.roundNumber = 1;
+				teams = {
+					A: { ...data.teams.A },
+					B: { ...data.teams.B }
+				};
+				console.log('🎮 Team game started!');
+			}
+
+			if (data.type === 'TEAM_ROUND_START') {
+				teamGameState.currentTurn = data.currentTurn;
+				teamGameState.roundNumber = data.round;
+				teamGameState.currentSequence = data.sequence;
+				teamGameState.waitingForGuess = true;
+
+				// Show sequence to audience
+				showTeamSequence = true;
+				teamSequenceDisplay = data.sequence.join(' ');
+
+				// Hide sequence after 3 seconds
+				setTimeout(() => {
+					showTeamSequence = false;
+					teamSequenceDisplay = '';
+				}, 3000);
+
+				console.log(
+					`🎮 Round ${data.round} - Team ${data.currentTurn}'s turn. Sequence: ${data.sequence.join(' ')}`
+				);
+			}
+
+			if (data.type === 'TEAM_ROUND_END') {
+				teamGameState.waitingForGuess = false;
+				teams = {
+					A: { ...data.teams.A },
+					B: { ...data.teams.B }
+				};
+				console.log('🎮 Round ended!', data);
+			}
+
+			if (data.type === 'TEAM_GAME_END') {
+				teamGameState.isActive = false;
+				console.log('🎮 Team game ended!', data.finalScores);
+			}
 		};
 	});
 </script>
@@ -570,14 +631,36 @@
 						<h3>Team A</h3>
 						<div>Score: {teams.A.score}</div>
 						<div>Members: {teams.A.members.join(', ') || 'None'}</div>
+						{#if teamGameState.isActive && teamGameState.currentTurn === 'A'}
+							<div class="current-turn">🎯 CURRENT TURN</div>
+						{/if}
 					</div>
 					<div class="team team-b">
 						<h3>Team B</h3>
 						<div>Score: {teams.B.score}</div>
 						<div>Members: {teams.B.members.join(', ') || 'None'}</div>
+						{#if teamGameState.isActive && teamGameState.currentTurn === 'B'}
+							<div class="current-turn">🎯 CURRENT TURN</div>
+						{/if}
 					</div>
-					<!-- Placeholder: Show which team's turn it is -->
-					<div class="team-turn">(Team turn logic coming soon)</div>
+
+					{#if teamGameState.isActive}
+						<div class="team-game-info">
+							<div class="round-info">Round {teamGameState.roundNumber}</div>
+							{#if showTeamSequence}
+								<div class="team-sequence">Sequence: {teamSequenceDisplay}</div>
+							{:else if teamGameState.waitingForGuess}
+								<div class="guess-instruction">
+									Team {teamGameState.currentTurn}: Type "GUESS <emoji>" in chat! </emoji>
+								</div>
+							{/if}
+						</div>
+					{:else}
+						<div class="team-instructions">
+							<p>Join a team: Type "Team A" or "Team B" in chat</p>
+							<p>When it's your turn: Type "GUESS <emoji>" in chat</emoji></p>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		{:else}
@@ -1001,5 +1084,76 @@
 	.team-turn {
 		font-size: 1.2rem;
 		margin-top: 0.5rem;
+	}
+
+	.current-turn {
+		font-size: 1.2rem;
+		margin-top: 0.5rem;
+		color: #ff4e50;
+		font-weight: bold;
+		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+		animation: pulse 1.5s infinite;
+	}
+
+	@keyframes pulse {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.7;
+		}
+	}
+
+	.team-game-info {
+		margin-top: 1rem;
+		text-align: center;
+		color: white;
+	}
+
+	.round-info {
+		font-size: 1.3rem;
+		margin-bottom: 0.5rem;
+		font-weight: bold;
+		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+	}
+
+	.team-sequence {
+		font-size: 2rem;
+		margin-bottom: 0.5rem;
+		font-weight: bold;
+		text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+		animation: fadeInOut 3s ease-in-out;
+	}
+
+	@keyframes fadeInOut {
+		0%,
+		100% {
+			opacity: 0;
+		}
+		20%,
+		80% {
+			opacity: 1;
+		}
+	}
+
+	.guess-instruction {
+		font-size: 1.1rem;
+		margin-bottom: 0.5rem;
+		color: #ffe082;
+		font-weight: bold;
+		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+	}
+
+	.team-instructions {
+		font-size: 1rem;
+		margin-top: 1rem;
+		color: white;
+		text-align: center;
+	}
+
+	.team-instructions p {
+		margin: 0.3rem 0;
+		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 	}
 </style>
