@@ -236,10 +236,6 @@ function broadcastTeams() {
 		},
 		gameState: teamGameState
 	};
-	console.log('Broadcasting teams:', {
-		A: Array.from(teams.A.members),
-		B: Array.from(teams.B.members)
-	});
 	broadcast(teamState);
 }
 

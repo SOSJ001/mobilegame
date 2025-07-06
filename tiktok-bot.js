@@ -2,7 +2,7 @@ import { WebcastPushConnection } from 'tiktok-live-connector';
 import WebSocket from 'ws';
 
 // Configuration
-const TIKTOK_USERNAME = 'mickey7hi'; // Replace with your TikTok username
+const TIKTOK_USERNAME = 'realpeller'; // Replace with your TikTok username
 const GAME_WEBSOCKET_URL = 'ws://localhost:3001'; // WebSocket server for game
 
 // WebSocket connection to game

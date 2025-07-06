@@ -134,7 +134,7 @@
 	let showTutorial = true;
 	let gameMode = 'normal'; // 'normal' or 'timed'
 	let timeLeft = 60;
-	let timer: number;
+	let timer: ReturnType<typeof setInterval>;
 
 	// Visual & Audio Feedback
 	let audioCorrect: HTMLAudioElement;
@@ -160,12 +160,24 @@
 	];
 
 	let selectedMode = 'STREAMER_PLAY';
-	let ws;
+	let ws: WebSocket;
 
 	// Team state for Audience vs Audience mode
-	let teams = {
+	let teams: {
+		A: { members: string[]; score: number };
+		B: { members: string[]; score: number };
+	} = {
 		A: { members: [], score: 0 },
 		B: { members: [], score: 0 }
+	};
+
+	// Animation state for team members
+	let teamAnimations: {
+		A: Set<string>;
+		B: Set<string>;
+	} = {
+		A: new Set<string>(),
+		B: new Set<string>()
 	};
 
 	// Team gameplay state
@@ -406,13 +418,28 @@
 
 			// Handle team state
 			if (data.type === 'TEAM_STATE') {
+				// Check for new members to animate
+				(['A', 'B'] as const).forEach((teamKey) => {
+					const newMembers = data.teams[teamKey].members;
+					const oldMembers = teams[teamKey].members;
+
+					// Find new members (joined)
+					newMembers.forEach((member: string) => {
+						if (!oldMembers.includes(member)) {
+							teamAnimations[teamKey].add(member);
+							// Remove animation after 2 seconds
+							setTimeout(() => {
+								teamAnimations[teamKey].delete(member);
+								teamAnimations = teamAnimations; // Trigger reactivity
+							}, 2000);
+						}
+					});
+				});
+
 				teams = {
-					A: { ...data.teams.A },
-					B: { ...data.teams.B }
+					A: { members: [...data.teams.A.members], score: data.teams.A.score },
+					B: { members: [...data.teams.B.members], score: data.teams.B.score }
 				};
-				// Log team members and their teams for debugging
-				console.log('Team A members:', teams.A.members);
-				console.log('Team B members:', teams.B.members);
 			}
 
 			// Handle team game events
@@ -630,7 +657,18 @@
 					<div class="team team-a">
 						<h3>Team A</h3>
 						<div>Score: {teams.A.score}</div>
-						<div>Members: {teams.A.members.join(', ') || 'None'}</div>
+						<div class="team-members">
+							Members:
+							{#if teams.A.members.length === 0}
+								<span class="no-members">None</span>
+							{:else}
+								{#each teams.A.members as member}
+									<span class="member {teamAnimations.A.has(member) ? 'member-joined' : ''}">
+										{member}
+									</span>
+								{/each}
+							{/if}
+						</div>
 						{#if teamGameState.isActive && teamGameState.currentTurn === 'A'}
 							<div class="current-turn">🎯 CURRENT TURN</div>
 						{/if}
@@ -638,7 +676,18 @@
 					<div class="team team-b">
 						<h3>Team B</h3>
 						<div>Score: {teams.B.score}</div>
-						<div>Members: {teams.B.members.join(', ') || 'None'}</div>
+						<div class="team-members">
+							Members:
+							{#if teams.B.members.length === 0}
+								<span class="no-members">None</span>
+							{:else}
+								{#each teams.B.members as member}
+									<span class="member {teamAnimations.B.has(member) ? 'member-joined' : ''}">
+										{member}
+									</span>
+								{/each}
+							{/if}
+						</div>
 						{#if teamGameState.isActive && teamGameState.currentTurn === 'B'}
 							<div class="current-turn">🎯 CURRENT TURN</div>
 						{/if}
@@ -1155,5 +1204,48 @@
 	.team-instructions p {
 		margin: 0.3rem 0;
 		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+	}
+
+	.team-members {
+		margin: 0.5rem 0;
+	}
+
+	.member {
+		display: inline-block;
+		margin: 0.2rem 0.3rem;
+		padding: 0.2rem 0.5rem;
+		background: rgba(255, 255, 255, 0.1);
+		border-radius: 0.3rem;
+		transition: all 0.3s ease;
+	}
+
+	.member-joined {
+		animation: memberJoin 2s ease-out;
+	}
+
+	@keyframes memberJoin {
+		0% {
+			transform: scale(0) rotate(-10deg);
+			opacity: 0;
+			background: rgba(76, 175, 80, 0.8);
+			box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+		}
+		50% {
+			transform: scale(1.2) rotate(5deg);
+			opacity: 1;
+			background: rgba(76, 175, 80, 0.9);
+			box-shadow: 0 0 30px rgba(76, 175, 80, 0.8);
+		}
+		100% {
+			transform: scale(1) rotate(0deg);
+			opacity: 1;
+			background: rgba(255, 255, 255, 0.1);
+			box-shadow: none;
+		}
+	}
+
+	.no-members {
+		color: rgba(255, 255, 255, 0.6);
+		font-style: italic;
 	}
 </style>
