@@ -630,24 +630,24 @@
 			{/if}
 
 			<div class="sequence">{message}</div>
-			
-			<!-- Sequence Display Overlay -->
-			{#if showingSequence || showTeamSequence}
-				<div class="sequence-overlay">
-					<div class="sequence-indicator">
-						<div class="loading-spinner"></div>
-						<div class="sequence-message">
-							{#if showingSequence}
-								Watching Sequence...
-							{:else if showTeamSequence}
-								Team {teamGameState.currentTurn} Sequence
-							{/if}
+
+			<div class="emoji-grid">
+				<!-- Sequence Display Overlay -->
+				{#if showingSequence || showTeamSequence}
+					<div class="sequence-overlay">
+						<div class="sequence-indicator">
+							<div class="loading-spinner"></div>
+							<div class="sequence-message">
+								{#if showingSequence}
+									Watching Sequence...
+								{:else if showTeamSequence}
+									Team {teamGameState.currentTurn} Sequence
+								{/if}
+							</div>
 						</div>
 					</div>
-				</div>
-			{/if}
-			
-			<div class="emoji-grid">
+				{/if}
+
 				{#each EMOJIS as emoji, idx}
 					<button
 						class="emoji-btn {animateIdx === idx && animateType === 'bounce'
@@ -950,6 +950,7 @@
 		grid-template-columns: repeat(5, 3.5rem);
 		gap: 1rem;
 		margin: 2rem 0;
+		position: relative;
 	}
 
 	.emoji-btn {
@@ -1273,20 +1274,20 @@
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background: rgba(0, 0, 0, 0.7);
+		background: rgba(0, 0, 0, 0.8);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		z-index: 20;
-		backdrop-filter: blur(3px);
+		border-radius: 0.5rem;
+		backdrop-filter: blur(5px);
 	}
 
 	.sequence-indicator {
 		background: rgba(255, 255, 255, 0.95);
-		padding: 2rem 3rem;
-		border-radius: 1rem;
+		padding: 1.5rem 2rem;
+		border-radius: 0.8rem;
 		text-align: center;
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 		animation: fadeInScale 0.3s ease-out;
 	}
 
@@ -1302,22 +1303,26 @@
 	}
 
 	.loading-spinner {
-		width: 40px;
-		height: 40px;
-		border: 4px solid #f3f3f3;
-		border-top: 4px solid #ff4e50;
+		width: 30px;
+		height: 30px;
+		border: 3px solid #f3f3f3;
+		border-top: 3px solid #ff4e50;
 		border-radius: 50%;
 		animation: spin 1s linear infinite;
-		margin: 0 auto 1rem;
+		margin: 0 auto 0.8rem;
 	}
 
 	@keyframes spin {
-		0% { transform: rotate(0deg); }
-		100% { transform: rotate(360deg); }
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
 	}
 
 	.sequence-message {
-		font-size: 1.2rem;
+		font-size: 1rem;
 		font-weight: bold;
 		color: #333;
 		text-shadow: none;
