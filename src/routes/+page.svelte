@@ -520,9 +520,12 @@
 
 			// Handle team game events
 			if (data.type === 'TEAM_GAME_START') {
-				teamGameState.isActive = true;
-				teamGameState.currentTurn = 'A';
-				teamGameState.roundNumber = 1;
+				teamGameState = {
+					...teamGameState,
+					isActive: true,
+					currentTurn: 'A',
+					roundNumber: 1
+				};
 				teams = {
 					A: { ...data.teams.A },
 					B: { ...data.teams.B }
@@ -531,10 +534,13 @@
 			}
 
 			if (data.type === 'TEAM_ROUND_START') {
-				teamGameState.currentTurn = data.currentTurn;
-				teamGameState.roundNumber = data.round;
-				teamGameState.currentSequence = data.sequence;
-				teamGameState.waitingForGuess = true;
+				teamGameState = {
+					...teamGameState,
+					currentTurn: data.currentTurn,
+					roundNumber: data.round,
+					currentSequence: data.sequence,
+					waitingForGuess: true
+				};
 
 				// Show sequence to audience
 				showTeamSequence = true;
@@ -574,7 +580,10 @@
 			}
 
 			if (data.type === 'TEAM_ROUND_END') {
-				teamGameState.waitingForGuess = false;
+				teamGameState = {
+					...teamGameState,
+					waitingForGuess: false
+				};
 				teams = {
 					A: { ...data.teams.A },
 					B: { ...data.teams.B }
@@ -583,7 +592,10 @@
 			}
 
 			if (data.type === 'TEAM_GAME_END') {
-				teamGameState.isActive = false;
+				teamGameState = {
+					...teamGameState,
+					isActive: false
+				};
 				console.log('🎮 Team game ended!', data.finalScores);
 
 				// Notify backend that team game ended
@@ -782,13 +794,13 @@
 				<div class="team-play-section">
 					<div class="team team-a">
 						<h3>Team A</h3>
-						<div>Score: {teams.A.score}</div>
+						<div>Score: {teams.A?.score ?? 0}</div>
 						<div class="team-members">
 							Members:
-							{#if teams.A.members.length === 0}
+							{#if !teams.A?.members || teams.A.members.length === 0}
 								<span class="no-members">None</span>
 							{:else}
-								{#each teams.A.members as member}
+								{#each teams.A?.members ?? [] as member}
 									<span class="member {teamAnimations.A.has(member) ? 'member-joined' : ''}">
 										{member}
 									</span>
@@ -801,13 +813,13 @@
 					</div>
 					<div class="team team-b">
 						<h3>Team B</h3>
-						<div>Score: {teams.B.score}</div>
+						<div>Score: {teams.B?.score ?? 0}</div>
 						<div class="team-members">
 							Members:
-							{#if teams.B.members.length === 0}
+							{#if !teams.B?.members || teams.B.members.length === 0}
 								<span class="no-members">None</span>
 							{:else}
-								{#each teams.B.members as member}
+								{#each teams.B?.members ?? [] as member}
 									<span class="member {teamAnimations.B.has(member) ? 'member-joined' : ''}">
 										{member}
 									</span>
@@ -822,6 +834,9 @@
 					{#if teamGameState.isActive}
 						<div class="team-game-info">
 							<div class="round-info">Round {teamGameState.roundNumber}</div>
+							<div class="debug-info" style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">
+								Active: {teamGameState.isActive} | Turn: {teamGameState.currentTurn} | Waiting: {teamGameState.waitingForGuess}
+							</div>
 							{#if showTeamSequence}
 								<div class="team-sequence">Sequence: {teamSequenceDisplay}</div>
 							{:else if teamGameState.waitingForGuess}
