@@ -630,6 +630,23 @@
 			{/if}
 
 			<div class="sequence">{message}</div>
+			
+			<!-- Sequence Display Overlay -->
+			{#if showingSequence || showTeamSequence}
+				<div class="sequence-overlay">
+					<div class="sequence-indicator">
+						<div class="loading-spinner"></div>
+						<div class="sequence-message">
+							{#if showingSequence}
+								Watching Sequence...
+							{:else if showTeamSequence}
+								Team {teamGameState.currentTurn} Sequence
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/if}
+			
 			<div class="emoji-grid">
 				{#each EMOJIS as emoji, idx}
 					<button
@@ -638,7 +655,7 @@
 							: ''} {animateIdx === idx && animateType === 'shake' ? 'shake' : ''}"
 						style="background: {COLOR_THEMES[currentTheme].button}"
 						on:click={() => handleEmojiTap(emoji, idx)}
-						disabled={showingSequence || gameOver || gamePaused}
+						disabled={showingSequence || showTeamSequence || gameOver || gamePaused}
 					>
 						{emoji}
 					</button>
@@ -1247,5 +1264,62 @@
 	.no-members {
 		color: rgba(255, 255, 255, 0.6);
 		font-style: italic;
+	}
+
+	/* Sequence Overlay Styles */
+	.sequence-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.7);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 20;
+		backdrop-filter: blur(3px);
+	}
+
+	.sequence-indicator {
+		background: rgba(255, 255, 255, 0.95);
+		padding: 2rem 3rem;
+		border-radius: 1rem;
+		text-align: center;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+		animation: fadeInScale 0.3s ease-out;
+	}
+
+	@keyframes fadeInScale {
+		0% {
+			opacity: 0;
+			transform: scale(0.8);
+		}
+		100% {
+			opacity: 1;
+			transform: scale(1);
+		}
+	}
+
+	.loading-spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid #f3f3f3;
+		border-top: 4px solid #ff4e50;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+		margin: 0 auto 1rem;
+	}
+
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
+	}
+
+	.sequence-message {
+		font-size: 1.2rem;
+		font-weight: bold;
+		color: #333;
+		text-shadow: none;
 	}
 </style>
