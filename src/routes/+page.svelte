@@ -219,6 +219,17 @@
 		gameStarted = true;
 		showTutorial = false;
 
+		// Notify backend that game started
+		if (ws && ws.readyState === 1) {
+			ws.send(
+				JSON.stringify({
+					type: 'SEQUENCE_STATE',
+					showingSequence: false,
+					gameStarted: true
+				})
+			);
+		}
+
 		if (gameMode === 'timed') {
 			startTimer();
 		}
@@ -240,6 +251,17 @@
 					gameOver = true;
 					message = `Time's up! Score: ${score}`;
 					audioGameOver?.play();
+
+					// Notify backend that game ended
+					if (ws && ws.readyState === 1) {
+						ws.send(
+							JSON.stringify({
+								type: 'SEQUENCE_STATE',
+								showingSequence: false,
+								gameStarted: false
+							})
+						);
+					}
 				}
 			}
 		}, 1000);
@@ -249,6 +271,17 @@
 		gamePaused = true;
 		if (gameMode === 'timed') {
 			clearInterval(timer);
+		}
+
+		// Notify backend that game is paused (no sequence display, but game is still active)
+		if (ws && ws.readyState === 1) {
+			ws.send(
+				JSON.stringify({
+					type: 'SEQUENCE_STATE',
+					showingSequence: false,
+					gameStarted: true
+				})
+			);
 		}
 	}
 
@@ -261,6 +294,17 @@
 
 	async function showSequence() {
 		showingSequence = true;
+		// Notify backend that sequence is being shown
+		if (ws && ws.readyState === 1) {
+			ws.send(
+				JSON.stringify({
+					type: 'SEQUENCE_STATE',
+					showingSequence: true,
+					gameStarted: true
+				})
+			);
+		}
+
 		for (let i = 0; i < sequence.length; i++) {
 			message = sequence[i];
 			await new Promise((r) => setTimeout(r, 700));
@@ -269,6 +313,17 @@
 		}
 		showingSequence = false;
 		userInput = [];
+
+		// Notify backend that sequence display ended
+		if (ws && ws.readyState === 1) {
+			ws.send(
+				JSON.stringify({
+					type: 'SEQUENCE_STATE',
+					showingSequence: false,
+					gameStarted: true
+				})
+			);
+		}
 	}
 
 	function handleEmojiTap(emoji: string, idx: number) {
@@ -296,6 +351,17 @@
 					message = `Game Over! Score: ${score}`;
 					audioGameOver?.play();
 					clearInterval(timer);
+
+					// Notify backend that game ended
+					if (ws && ws.readyState === 1) {
+						ws.send(
+							JSON.stringify({
+								type: 'SEQUENCE_STATE',
+								showingSequence: false,
+								gameStarted: false
+							})
+						);
+					}
 				}, 1000); // Wait 1 second after emoji disappears
 			}, 500); // Shake for 500ms
 			return;
@@ -427,18 +493,28 @@
 					newMembers.forEach((member: string) => {
 						if (!oldMembers.includes(member)) {
 							teamAnimations[teamKey].add(member);
+							// Force reactivity for animations
+							teamAnimations = { ...teamAnimations };
+							
 							// Remove animation after 2 seconds
 							setTimeout(() => {
 								teamAnimations[teamKey].delete(member);
-								teamAnimations = teamAnimations; // Trigger reactivity
+								teamAnimations = { ...teamAnimations }; // Trigger reactivity
 							}, 2000);
 						}
 					});
 				});
 
+				// Update teams with proper reactivity
 				teams = {
-					A: { members: [...data.teams.A.members], score: data.teams.A.score },
-					B: { members: [...data.teams.B.members], score: data.teams.B.score }
+					A: { 
+						members: [...data.teams.A.members], 
+						score: data.teams.A.score 
+					},
+					B: { 
+						members: [...data.teams.B.members], 
+						score: data.teams.B.score 
+					}
 				};
 			}
 
@@ -464,10 +540,32 @@
 				showTeamSequence = true;
 				teamSequenceDisplay = data.sequence.join(' ');
 
+				// Notify backend that sequence is being shown
+				if (ws && ws.readyState === 1) {
+					ws.send(
+						JSON.stringify({
+							type: 'SEQUENCE_STATE',
+							showingSequence: true,
+							gameStarted: true
+						})
+					);
+				}
+
 				// Hide sequence after 3 seconds
 				setTimeout(() => {
 					showTeamSequence = false;
 					teamSequenceDisplay = '';
+
+					// Notify backend that sequence display ended
+					if (ws && ws.readyState === 1) {
+						ws.send(
+							JSON.stringify({
+								type: 'SEQUENCE_STATE',
+								showingSequence: false,
+								gameStarted: true
+							})
+						);
+					}
 				}, 3000);
 
 				console.log(
@@ -487,6 +585,17 @@
 			if (data.type === 'TEAM_GAME_END') {
 				teamGameState.isActive = false;
 				console.log('🎮 Team game ended!', data.finalScores);
+
+				// Notify backend that team game ended
+				if (ws && ws.readyState === 1) {
+					ws.send(
+						JSON.stringify({
+							type: 'SEQUENCE_STATE',
+							showingSequence: false,
+							gameStarted: false
+						})
+					);
+				}
 			}
 		};
 	});
@@ -746,6 +855,17 @@
 						on:click={() => {
 							gameStarted = false;
 							showTutorial = true;
+
+							// Notify backend that game ended
+							if (ws && ws.readyState === 1) {
+								ws.send(
+									JSON.stringify({
+										type: 'SEQUENCE_STATE',
+										showingSequence: false,
+										gameStarted: false
+									})
+								);
+							}
 						}}>Main Menu</button
 					>
 				</div>

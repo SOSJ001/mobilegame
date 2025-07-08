@@ -18,7 +18,9 @@ const GAME_MODES = [
 
 // Central game state
 let gameState = {
-	gameMode: 'STREAMER_PLAY' // default mode
+	gameMode: 'STREAMER_PLAY', // default mode
+	showingSequence: false, // Track when sequence is being displayed for ALL modes
+	gameStarted: false // Track if any game is currently active
 };
 
 // Team play state for Audience vs Audience mode
@@ -35,7 +37,8 @@ let teamGameState = {
 	roundNumber: 1,
 	sequenceLength: 1,
 	waitingForGuess: false,
-	guessWindow: null
+	guessWindow: null,
+	showingSequence: false // Track when sequence is being displayed
 };
 
 // Aggregation window (ms)
@@ -72,6 +75,10 @@ function startTeamRound() {
 		teams.A.emojiGuesses = [];
 		teams.B.emojiGuesses = [];
 
+		// Set sequence display state
+		teamGameState.showingSequence = true;
+		teamGameState.waitingForGuess = false;
+
 		// Broadcast new round
 		broadcast({
 			type: 'TEAM_ROUND_START',
@@ -83,6 +90,13 @@ function startTeamRound() {
 		console.log(
 			`🎮 Team round ${teamGameState.roundNumber} started. Sequence: ${teamGameState.currentSequence.join(' ')}`
 		);
+
+		// After 3 seconds, allow guessing
+		setTimeout(() => {
+			teamGameState.showingSequence = false;
+			teamGameState.waitingForGuess = true;
+			console.log(`🎮 Sequence display ended. Team ${teamGameState.currentTurn} can now guess.`);
+		}, 3000);
 	}
 }
 
@@ -126,6 +140,10 @@ function endTeamRound() {
 		}
 	});
 
+	// Reset sequence display state
+	teamGameState.showingSequence = false;
+	teamGameState.waitingForGuess = false;
+
 	// Broadcast round results
 	broadcast({
 		type: 'TEAM_ROUND_END',
@@ -153,6 +171,8 @@ function startTeamGame() {
 	teamGameState.currentTurn = 'A';
 	teamGameState.roundNumber = 1;
 	teamGameState.sequenceLength = 1;
+	teamGameState.showingSequence = false;
+	teamGameState.waitingForGuess = false;
 	teams.A.score = 0;
 	teams.B.score = 0;
 
@@ -171,6 +191,8 @@ function startTeamGame() {
 // Helper to stop team game
 function stopTeamGame() {
 	teamGameState.isActive = false;
+	teamGameState.showingSequence = false;
+	teamGameState.waitingForGuess = false;
 	if (teamGameState.guessWindow) {
 		clearTimeout(teamGameState.guessWindow);
 		teamGameState.guessWindow = null;
@@ -298,15 +320,28 @@ wss.on('connection', (ws) => {
 			}
 
 			// Handle team emoji guess
-			if (
-				data.type === 'TEAM_EMOJI_GUESS' &&
-				(data.team === 'A' || data.team === 'B') &&
-				data.emoji &&
-				data.user
-			) {
-				// Only accept guesses from team members and during their turn
-				if (teams[data.team].members.has(data.user) && teamGameState.currentTurn === data.team) {
-					teams[data.team].emojiGuesses.push({ emoji: data.emoji, user: data.user });
+			if (data.type === 'TEAM_EMOJI_GUESS' && data.emoji && data.user) {
+				// Determine which team the user is on
+				let userTeam = null;
+				if (teams.A.members.has(data.user)) {
+					userTeam = 'A';
+				} else if (teams.B.members.has(data.user)) {
+					userTeam = 'B';
+				}
+
+				// Only accept guesses if:
+				// 1. User is on a team
+				// 2. It's their team's turn
+				// 3. Sequence is not being displayed
+				// 4. Game is waiting for guesses
+				if (
+					userTeam &&
+					teamGameState.currentTurn === userTeam &&
+					!teamGameState.showingSequence &&
+					teamGameState.waitingForGuess
+				) {
+					teams[userTeam].emojiGuesses.push({ emoji: data.emoji, user: data.user });
+					console.log(`✅ ${data.user} (Team ${userTeam}) guessed: ${data.emoji}`);
 
 					// Start guess window if not already started
 					if (!teamGameState.guessWindow) {
@@ -315,7 +350,34 @@ wss.on('connection', (ws) => {
 							teamGameState.guessWindow = null;
 						}, 5000); // 5 second window for guessing
 					}
+				} else {
+					// Log why guess was rejected
+					if (!userTeam) {
+						console.log(`❌ ${data.user} tried to guess but is not on a team`);
+					} else if (teamGameState.currentTurn !== userTeam) {
+						console.log(
+							`❌ ${data.user} (Team ${userTeam}) tried to guess but it's Team ${teamGameState.currentTurn}'s turn`
+						);
+					} else if (teamGameState.showingSequence) {
+						console.log(
+							`❌ ${data.user} (Team ${userTeam}) tried to guess during sequence display`
+						);
+					} else if (!teamGameState.waitingForGuess) {
+						console.log(
+							`❌ ${data.user} (Team ${userTeam}) tried to guess but game is not waiting for guesses`
+						);
+					}
 				}
+				return;
+			}
+
+			// Handle sequence display state updates from frontend
+			if (data.type === 'SEQUENCE_STATE') {
+				gameState.showingSequence = data.showingSequence;
+				gameState.gameStarted = data.gameStarted;
+				console.log(
+					`🎮 Sequence state updated: showingSequence=${data.showingSequence}, gameStarted=${data.gameStarted}`
+				);
 				return;
 			}
 
@@ -327,6 +389,23 @@ wss.on('connection', (ws) => {
 					stopTeamGame();
 				}
 				return;
+			}
+
+			// Filter audience emoji messages during sequence display
+			if (data.type === 'audience_emoji') {
+				if (gameState.showingSequence) {
+					console.log(
+						`❌ ${data.user} tried to send emoji ${data.emoji} during sequence display - blocked`
+					);
+					return; // Don't broadcast during sequence display
+				} else if (!gameState.gameStarted) {
+					console.log(
+						`❌ ${data.user} tried to send emoji ${data.emoji} but no game is active - blocked`
+					);
+					return; // Don't broadcast if no game is active
+				} else {
+					console.log(`✅ ${data.user} sent emoji ${data.emoji} - accepted`);
+				}
 			}
 
 			// Broadcast to all other clients
